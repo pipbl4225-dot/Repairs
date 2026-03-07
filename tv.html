@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>АВП Технология — TV Дашборд</title>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cyan:    #00BCD4;
+  --cyan-d:  #0097A7;
+  --dark:    #0D0F14;
+  --dark2:   #161920;
+  --dark3:   #1E2230;
+  --border:  #252A3A;
+  --text:    #E8EAF0;
+  --muted:   #5A6280;
+  --success: #4CAF50;
+  --warn:    #FF9800;
+  --danger:  #F44336;
+  --gold:    #FFD700;
+  --silver:  #C0C0C0;
+  --bronze:  #CD7F32;
+  --font:    'Golos Text', sans-serif;
+  --mono:    'JetBrains Mono', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; }
+body { min-height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+body {
+  font-family: var(--font);
+  background: var(--dark);
+  color: var(--text);
+  font-size: 16px;
+  background-image:
+    radial-gradient(ellipse 80% 40% at 50% -10%, rgba(0,188,212,.07) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 30% at 90% 90%, rgba(0,188,212,.04) 0%, transparent 60%);
+}
+
+/* ===== SETUP SCREEN ===== */
+#setupScreen {
+  position: fixed; inset: 0; z-index: 999;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--dark);
+  background-image: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(0,188,212,.1) 0%, transparent 70%);
+}
+.setup-box {
+  background: var(--dark2); border: 1px solid var(--border);
+  border-radius: 16px; padding: 48px 40px;
+  width: 100%; max-width: 480px;
+  box-shadow: 0 8px 40px rgba(0,0,0,.5);
+  animation: fadeUp .4s ease both;
+}
+.setup-logo { text-align: center; margin-bottom: 36px; }
+.setup-logo .icon { font-size: 52px; margin-bottom: 12px; }
+.setup-logo .brand { font-size: 26px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; }
+.setup-logo .brand span { color: var(--cyan); }
+.setup-logo .sub { color: var(--muted); font-size: 13px; margin-top: 6px; font-family: var(--mono); }
+.field { margin-bottom: 20px; }
+.field label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 8px; }
+.field select, .field input {
+  width: 100%; background: var(--dark3); color: var(--text);
+  border: 1.5px solid var(--border); border-radius: 8px;
+  padding: 12px 14px; font-size: 15px; font-family: var(--font);
+  appearance: none; transition: border-color .2s;
+}
+.field select:focus, .field input:focus { outline: none; border-color: var(--cyan); }
+.field select option { background: var(--dark3); }
+.btn-launch {
+  width: 100%; padding: 14px; background: var(--cyan); color: #000;
+  border: none; border-radius: 10px; font-size: 16px; font-weight: 900;
+  font-family: var(--font); text-transform: uppercase; letter-spacing: .08em;
+  cursor: pointer; transition: all .18s;
+}
+.btn-launch:hover { background: var(--cyan-d); transform: translateY(-1px); }
+.btn-launch:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
+
+/* ===== TV LAYOUT ===== */
+#tvScreen { display: none; min-height: 100vh; flex-direction: column; }
+#tvScreen.show { display: flex; }
+
+.tv-header {
+  display: flex; align-items: center; padding: 14px 28px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(22,25,32,.9);
+  backdrop-filter: blur(8px);
+  flex-shrink: 0;
+  gap: 20px;
+}
+.tv-brand { font-size: 20px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; }
+.tv-brand span { color: var(--cyan); }
+.tv-subtitle { font-size: 13px; color: var(--muted); font-family: var(--mono); }
+.tv-clock { margin-left: auto; font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--cyan); letter-spacing: .05em; }
+.tv-date { font-size: 12px; color: var(--muted); text-align: right; margin-top: 2px; font-family: var(--mono); }
+.refresh-indicator { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); font-family: var(--mono); }
+.pulse-dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; animation: pulse 2s infinite; }
+
+.tv-body {
+  flex: 1;
+  overflow: visible;
+  display: grid;
+  padding: 10px 14px 30px;
+  gap: 10px;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  grid-template-rows: auto minmax(280px, 1fr) minmax(280px, 1fr);
+  -webkit-overflow-scrolling: touch;
+}
+
+/* iPad Pro portrait (1024px) and tablet landscape */
+@media (max-width: 1024px) and (orientation: portrait) {
+  .tv-body {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto auto;
+    overflow-y: auto;
+    padding: 8px 10px;
+  }
+}
+
+/* Small tablet / large phone landscape */
+@media (max-width: 768px) {
+  .tv-body {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto auto;
+    overflow-y: auto;
+    padding: 8px 10px;
+    gap: 8px;
+  }
+}
+
+/* Mobile portrait */
+@media (max-width: 500px) {
+  .tv-body {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    overflow-y: auto;
+    padding: 6px 8px;
+    gap: 8px;
+  }
+  .tv-header { padding: 8px 12px; gap: 8px; }
+  .tv-brand  { font-size: 14px; }
+  .tv-clock  { font-size: 15px; }
+  .tv-subtitle { font-size: 11px; }
+}
+
+/* ===== KPI ROW ===== */
+.kpi-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+@media (max-width: 1100px) {
+  .kpi-row { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 680px) {
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+}
+.kpi-tile {
+  background: var(--dark2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 12px 14px;
+  position: relative; overflow: hidden;
+}
+.kpi-tile::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background: var(--cyan); }
+.kpi-tile.green::before { background: var(--success); }
+.kpi-tile.warn::before  { background: var(--warn); }
+.kpi-tile.red::before   { background: var(--danger); }
+.kpi-tile.gold::before  { background: var(--gold); }
+.kpi-num { font-size: 2em; font-weight: 900; color: var(--cyan); font-family: var(--mono); line-height: 1; margin: 4px 0 3px; }
+.kpi-tile.green .kpi-num { color: var(--success); }
+.kpi-tile.warn  .kpi-num { color: var(--warn); }
+.kpi-tile.red   .kpi-num { color: var(--danger); }
+.kpi-tile.gold  .kpi-num { color: var(--gold); }
+.kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+
+/* ===== PANEL PLACEMENTS — TV (3 col) ===== */
+.panel-staff  { grid-row: 2 / 4; grid-column: 1; }
+.panel-top3   { grid-row: 2;     grid-column: 2; }
+.panel-chart  { grid-row: 2;     grid-column: 3; }
+.panel-active { grid-row: 3;     grid-column: 2; }
+.panel-avg    { grid-row: 3;     grid-column: 3; }
+
+/* iPad Pro portrait + tablet */
+@media (max-width: 1024px) and (orientation: portrait),
+       (max-width: 768px) {
+  .tv-body {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: none;
+    overflow: visible;
+    padding: 8px 10px 30px;
+    gap: 8px;
+  }
+  .panel-staff, .panel-top3, .panel-chart,
+  .panel-active, .panel-avg {
+    grid-row: auto;
+    grid-column: auto;
+  }
+  .panel-staff { grid-column: 1 / -1; min-height: 260px; }
+  .panel { min-height: 180px; }
+}
+
+/* Mobile */
+@media (max-width: 500px) {
+  .tv-body {
+    grid-template-columns: 1fr;
+    padding: 6px 8px 30px;
+    gap: 8px;
+  }
+  .panel-staff, .panel-top3, .panel-chart,
+  .panel-active, .panel-avg {
+    grid-column: 1;
+    grid-row: auto;
+    min-height: 200px;
+  }
+  .panel { padding: 10px 8px; }
+  .panel-title { font-size: 11px; margin-bottom: 8px; }
+  .kpi-num { font-size: 1.6em; }
+  .kpi-label { font-size: 9px; }
+  .staff-table { font-size: 11px; }
+  .staff-table td { padding: 6px 4px; }
+}
+
+/* ===== PANELS ===== */
+.panel {
+  background: var(--dark2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px; overflow: hidden;
+  display: flex; flex-direction: column; min-height: 0;
+}
+/* Thin scrollbar inside panels */
+.panel-body::-webkit-scrollbar { width: 3px; }
+.panel-body::-webkit-scrollbar-track { background: transparent; }
+.panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.tv-body::-webkit-scrollbar { width: 4px; }
+.tv-body::-webkit-scrollbar-track { background: var(--dark); }
+.tv-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.panel-title {
+  font-size: 13px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--muted);
+  margin-bottom: 14px; flex-shrink: 0;
+  display: flex; align-items: center; gap: 8px;
+}
+.panel-title .accent { color: var(--cyan); }
+.panel-body { flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0; -webkit-overflow-scrolling: touch; }
+
+/* ===== STAFF TABLE ===== */
+.staff-table { width: 100%; border-collapse: collapse; }
+.staff-table th { font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .07em; padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+.staff-table td { padding: 10px 10px; border-bottom: 1px solid rgba(255,255,255,.03); font-size: 14px; vertical-align: middle; }
+.staff-table tr:last-child td { border-bottom: none; }
+.staff-table tr { transition: background .2s; }
+.staff-table tr:hover td { background: rgba(255,255,255,.02); }
+.staff-rank { font-family: var(--mono); font-size: 13px; color: var(--muted); width: 28px; }
+.staff-name { font-weight: 700; font-size: 15px; }
+.staff-role { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.staff-num { font-family: var(--mono); font-weight: 700; font-size: 16px; text-align: center; }
+.staff-bar-wrap { width: 100px; }
+.staff-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.staff-bar-fill { height: 100%; border-radius: 3px; background: var(--cyan); transition: width .8s ease; }
+.medal { font-size: 18px; }
+
+/* ===== TOP 3 ===== */
+.top3-grid { display: grid; grid-template-columns: 1fr 1.15fr 1fr; gap: 10px; height: 100%; align-items: flex-end; }
+.top3-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.top3-podium {
+  width: 100%; border-radius: 10px 10px 0 0;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: flex-end; padding: 14px 10px 16px;
+  position: relative;
+}
+.top3-podium.gold   { background: linear-gradient(135deg, rgba(255,215,0,.15), rgba(255,215,0,.08)); border: 1px solid rgba(255,215,0,.3); min-height: 140px; }
+.top3-podium.silver { background: linear-gradient(135deg, rgba(192,192,192,.12), rgba(192,192,192,.05)); border: 1px solid rgba(192,192,192,.2); min-height: 110px; }
+.top3-podium.bronze { background: linear-gradient(135deg, rgba(205,127,50,.12), rgba(205,127,50,.05)); border: 1px solid rgba(205,127,50,.2); min-height: 90px; }
+.top3-medal { font-size: 28px; margin-bottom: 6px; }
+.top3-name { font-size: 14px; font-weight: 700; text-align: center; }
+.top3-num { font-size: 26px; font-weight: 900; font-family: var(--mono); }
+.top3-podium.gold   .top3-num { color: var(--gold); }
+.top3-podium.silver .top3-num { color: var(--silver); }
+.top3-podium.bronze .top3-num { color: var(--bronze); }
+.top3-sub { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+
+/* ===== ACTIVE REPAIRS ===== */
+.repair-feed { display: flex; flex-direction: column; gap: 7px; overflow-y: auto; height: 100%; -webkit-overflow-scrolling: touch; }
+.repair-row {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--dark3); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px;
+  animation: slideIn .3s ease both;
+  flex-shrink: 0;
+}
+.repair-id { font-family: var(--mono); font-size: 12px; color: var(--cyan); width: 90px; flex-shrink: 0; }
+.repair-unit { font-weight: 700; font-size: 13px; flex: 1; }
+.repair-sn { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+.repair-tech { font-size: 12px; color: var(--muted); flex-shrink: 0; }
+
+/* ===== CHART ===== */
+.chart-area { height: 100%; display: flex; flex-direction: column; gap: 8px; }
+.chart-bars { flex: 1; display: flex; align-items: flex-end; gap: 6px; }
+.chart-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.chart-bar { width: 100%; background: var(--border); border-radius: 4px 4px 0 0; position: relative; min-height: 4px; transition: height .6s ease; }
+.chart-bar-fill { position: absolute; bottom: 0; left: 0; right: 0; background: var(--cyan); border-radius: 4px 4px 0 0; transition: height .6s ease; }
+.chart-bar-val { font-size: 11px; font-family: var(--mono); color: var(--cyan); font-weight: 700; }
+.chart-bar-label { font-size: 10px; color: var(--muted); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.chart-legend { display: flex; gap: 14px; justify-content: center; flex-shrink: 0; }
+.chart-legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+.chart-legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* ===== BADGES ===== */
+.badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 3px 8px; border-radius: 20px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  white-space: nowrap;
+}
+.badge::before { content:'●'; font-size: 7px; }
+.badge-new      { background:rgba(33,150,243,.15);  color:#64B5F6; }
+.badge-diag     { background:rgba(255,152,0,.15);   color:#FFB74D; }
+.badge-diagdone { background:rgba(156,39,176,.15);  color:#CE93D8; }
+.badge-repair   { background:rgba(0,188,212,.15);   color:var(--cyan); }
+.badge-repairdone{ background:rgba(76,175,80,.15);  color:#81C784; }
+.badge-testing  { background:rgba(103,58,183,.15);  color:#B39DDB; }
+.badge-testdone { background:rgba(0,150,136,.15);   color:#4DB6AC; }
+.badge-paused   { background:rgba(244,67,54,.15);   color:#EF9A9A; }
+.badge-done     { background:rgba(120,144,156,.15); color:#B0BEC5; }
+
+/* ===== AVG TIME TABLE ===== */
+.avg-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.04); }
+.avg-row:last-child { border-bottom: none; }
+.avg-unit { flex: 1; font-size: 13px; font-weight: 600; }
+.avg-bar-wrap { width: 120px; }
+.avg-bar { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.avg-bar-fill { height: 100%; background: var(--warn); border-radius: 3px; transition: width .8s ease; }
+.avg-val { font-family: var(--mono); font-size: 12px; color: var(--warn); width: 55px; text-align: right; flex-shrink: 0; }
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeUp   { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+@keyframes slideIn  { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:translateX(0)} }
+@keyframes pulse    { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(.85)} }
+@keyframes spin     { to{transform:rotate(360deg)} }
+@keyframes ticker   { from{transform:translateY(0)} to{transform:translateY(-50%)} }
+@keyframes countdown { from{width:100%} to{width:0%} }
+
+.countdown-bar {
+  position: fixed; bottom: 0; left: 0;
+  height: 3px; background: var(--cyan);
+  animation: countdown 30s linear infinite;
+}
+.spinner { display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite; }
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--dark2); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ========== SETUP ========== -->
+<div id="setupScreen">
+  <div class="setup-box">
+    <div class="setup-logo">
+      <div class="icon">📺</div>
+      <div class="brand">АВП <span>ТЕХНОЛОГИЯ</span></div>
+      <div class="sub">TV Дашборд — настройка</div>
+    </div>
+
+    <div class="field">
+      <label>Выберите сотрудников для отображения</label>
+      <div id="staffCheckboxes" style="display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto;background:var(--dark3);border:1.5px solid var(--border);border-radius:8px;padding:12px;">
+        <div style="color:var(--muted);font-size:13px;display:flex;align-items:center;gap:8px;"><div class="spinner"></div> Загрузка...</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Интервал обновления</label>
+      <select id="refreshInterval">
+        <option value="30">30 секунд</option>
+        <option value="60" selected>1 минута</option>
+        <option value="120">2 минуты</option>
+        <option value="300">5 минут</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Период KPI</label>
+      <select id="kpiPeriod">
+        <option value="month" selected>Текущий месяц</option>
+        <option value="week">Текущая неделя</option>
+        <option value="all">Всё время</option>
+      </select>
+    </div>
+
+    <div id="setupErr" style="display:none;background:rgba(244,67,54,.1);border:1px solid rgba(244,67,54,.3);border-radius:8px;padding:10px 14px;font-size:13px;color:#EF9A9A;margin-bottom:14px;"></div>
+    <button class="btn-launch" id="launchBtn" onclick="launch()" disabled>▶ Запустить дашборд</button>
+
+    <div style="text-align:center;margin-top:16px;">
+      <span style="font-size:11px;color:var(--muted);">Нужен сеанс из основного приложения · <a href="index.html" style="color:var(--cyan);">Войти сначала</a></span>
+    </div>
+  </div>
+</div>
+
+<!-- ========== TV SCREEN ========== -->
+<div id="tvScreen">
+  <header class="tv-header">
+    <div>
+      <div class="tv-brand">АВП <span>ТЕХНОЛОГИЯ</span></div>
+      <div class="tv-subtitle" id="tvSubtitle">Дашборд участка</div>
+    </div>
+    <div class="refresh-indicator">
+      <div class="pulse-dot" id="pulseDot"></div>
+      <span id="lastUpdate">—</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button onclick="toggleFullscreen()" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:13px;cursor:pointer;" title="Полный экран">⛶</button>
+      <div style="text-align:right;">
+        <div class="tv-clock" id="tvClock">00:00:00</div>
+        <div class="tv-date" id="tvDate">—</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="tv-body layout-full" id="tvBody">
+    <!-- Row 1: KPI tiles -->
+    <div class="kpi-row" id="kpiRow">
+      <div class="kpi-tile"><div class="kpi-label">Всего ремонтов</div><div class="kpi-num" id="kTotal">—</div></div>
+      <div class="kpi-tile warn"><div class="kpi-label">В работе</div><div class="kpi-num" id="kActive">—</div></div>
+      <div class="kpi-tile green"><div class="kpi-label">Завершено за месяц</div><div class="kpi-num" id="kDone">—</div></div>
+      <div class="kpi-tile"><div class="kpi-label">Активных техников</div><div class="kpi-num" id="kTechs">—</div></div>
+      <div class="kpi-tile gold"><div class="kpi-label">Лидер месяца</div><div class="kpi-num" id="kLeader" style="font-size:1em;line-height:1.3;">—</div></div>
+    </div>
+
+    <!-- Row 2-3 panels -->
+    <!-- Staff KPI — spans 2 rows on TV, full width on mobile -->
+    <div class="panel panel-staff">
+      <div class="panel-title">👷 KPI сотрудников <span class="accent" id="periodLabel"></span></div>
+      <div class="panel-body" id="staffPanel">
+        <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);gap:8px;"><div class="spinner"></div> Загрузка...</div>
+      </div>
+    </div>
+
+    <!-- Top 3 -->
+    <div class="panel panel-top3">
+      <div class="panel-title">🏆 Топ-3 месяца</div>
+      <div class="panel-body" id="top3Panel">
+        <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);">Загрузка...</div>
+      </div>
+    </div>
+
+    <!-- Chart by days -->
+    <div class="panel panel-chart">
+      <div class="panel-title">📈 Ремонты по дням <span class="accent">7 дней</span></div>
+      <div class="panel-body" id="chartPanel">
+        <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);">Загрузка...</div>
+      </div>
+    </div>
+
+    <!-- Active repairs feed -->
+    <div class="panel panel-active">
+      <div class="panel-title">⚡ Активные ремонты <span class="accent" id="activeCount"></span></div>
+      <div class="panel-body" id="activePanel">
+        <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);">Загрузка...</div>
+      </div>
+    </div>
+
+    <!-- Avg time by unit -->
+    <div class="panel panel-avg">
+      <div class="panel-title">⏱ Среднее время по блокам</div>
+      <div class="panel-body" id="avgPanel">
+        <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);">Загрузка...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="countdown-bar" id="countdownBar" style="display:none;"></div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzspSwUC3bj_eE453peb9-zHMovPWbzvA9IEBjcjHUg_vllbZrcYIKYw2SEFrhiQI_m/exec';
+
+let TV = {
+  session:          null,
+  selectedStaff:    [],
+  refreshInterval:  60,
+  kpiPeriod:        'month',
+  allRepairs:       [],
+  activeRepairs:    [],
+  refreshTimer:     null,
+  dashboard:        {}
+};
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('DOMContentLoaded', async () => {
+  // Try get session from localStorage (shared with main app)
+  try {
+    const raw = localStorage.getItem('ses');
+    const ts  = localStorage.getItem('ses_ts');
+    if (raw && ts && Date.now() - +ts < 7200000) {
+      TV.session = JSON.parse(raw);
+      await loadStaffList();
+      return;
+    }
+  } catch(e) {}
+  // No session
+  document.getElementById('setupErr').textContent = 'Нет активного сеанса. Войдите сначала в основное приложение.';
+  document.getElementById('setupErr').style.display = 'block';
+});
+
+// Clock
+setInterval(updateClock, 1000);
+updateClock();
+
+function updateClock() {
+  const now = new Date();
+  document.getElementById('tvClock').textContent = now.toLocaleTimeString('ru-RU');
+  document.getElementById('tvDate').textContent = now.toLocaleDateString('ru-RU', { weekday:'long', day:'numeric', month:'long' });
+}
+
+// ============================================================
+// LOAD STAFF LIST FOR SETUP
+// ============================================================
+async function loadStaffList() {
+  try {
+    const d = await get({ action: 'getAllUsers', sessionId: TV.session.sessionId });
+    if (!d.success || !d.users) {
+      showSetupErr('Нет доступа к списку сотрудников'); return;
+    }
+
+    // Исключить только роль "Владелец"
+    const active = d.users.filter(u => {
+      if (!u.isActive) return false;
+      const roles = u.roles || [];
+      return !roles.includes('Владелец');
+    });
+
+    const container = document.getElementById('staffCheckboxes');
+    container.innerHTML = `
+      <div onclick="toggleAllStaff()" id="cbAll" data-checked="1"
+        style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 10px;border-radius:8px;border-bottom:1px solid var(--border);margin-bottom:6px;transition:background .15s;"
+        onmouseover="this.style.background='rgba(0,188,212,.08)'" onmouseout="this.style.background=''">
+        <div id="chkAll" style="width:22px;height:22px;border-radius:6px;border:2.5px solid var(--cyan);background:var(--cyan);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;font-weight:900;color:#000;">✓</div>
+        <span style="font-weight:700;font-size:15px;color:var(--text);">Все сотрудники</span>
+        <span style="font-size:12px;color:var(--muted);margin-left:auto;">${active.length} чел.</span>
+      </div>
+      ${active.map(u => `
+        <div onclick="toggleStaff(this)" data-val="${u.username}" data-checked="1"
+          style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:7px 10px;border-radius:8px;transition:background .15s;"
+          onmouseover="this.style.background='rgba(0,188,212,.06)'" onmouseout="this.style.background=''">
+          <div class="chk-dot" style="width:22px;height:22px;border-radius:6px;border:2.5px solid var(--cyan);background:var(--cyan);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;font-weight:900;color:#000;">✓</div>
+          <span style="font-size:14px;flex:1;">${u.username}</span>
+          <span style="font-size:11px;color:var(--muted);">${(u.roles||[]).join(', ')}</span>
+        </div>`).join('')}`;
+
+    document.getElementById('launchBtn').disabled = false;
+  } catch(e) {
+    showSetupErr('Ошибка загрузки: ' + e.message);
+  }
+}
+
+function toggleStaff(el) {
+  const checked = el.dataset.checked === '1';
+  el.dataset.checked = checked ? '0' : '1';
+  const dot = el.querySelector('.chk-dot');
+  if (checked) {
+    dot.style.background = 'transparent';
+    dot.style.color = 'transparent';
+  } else {
+    dot.style.background = 'var(--cyan)';
+    dot.style.color = '#000';
+    dot.textContent = '✓';
+  }
+  updateAllCheckbox();
+}
+
+function toggleAllStaff() {
+  const allEl = document.getElementById('cbAll');
+  const nowChecked = allEl.dataset.checked === '1';
+  const newState = !nowChecked;
+  allEl.dataset.checked = newState ? '1' : '0';
+  const allDot = document.getElementById('chkAll');
+  allDot.style.background = newState ? 'var(--cyan)' : 'transparent';
+  allDot.style.color = newState ? '#000' : 'transparent';
+
+  document.querySelectorAll('[data-val]').forEach(el => {
+    el.dataset.checked = newState ? '1' : '0';
+    const dot = el.querySelector('.chk-dot');
+    dot.style.background = newState ? 'var(--cyan)' : 'transparent';
+    dot.style.color = newState ? '#000' : 'transparent';
+  });
+}
+
+function updateAllCheckbox() {
+  const all  = document.querySelectorAll('[data-val]').length;
+  const chkd = document.querySelectorAll('[data-val][data-checked="1"]').length;
+  const allDot = document.getElementById('chkAll');
+  const allEl  = document.getElementById('cbAll');
+  if (!allDot) return;
+  const isAll = chkd === all;
+  allEl.dataset.checked = isAll ? '1' : '0';
+  allDot.style.background = chkd > 0 ? 'var(--cyan)' : 'transparent';
+  allDot.style.color = chkd > 0 ? '#000' : 'transparent';
+  allDot.textContent = isAll ? '✓' : '–';
+}
+
+function showSetupErr(msg) {
+  const el = document.getElementById('setupErr');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+// ============================================================
+// LAUNCH
+// ============================================================
+async function launch() {
+  // Collect selected staff
+  TV.selectedStaff = [...document.querySelectorAll('[data-val][data-checked="1"]')].map(el => el.dataset.val);
+  if (!TV.selectedStaff.length) { showSetupErr('Выберите хотя бы одного сотрудника'); return; }
+
+  TV.refreshInterval = parseInt(document.getElementById('refreshInterval').value);
+  TV.kpiPeriod       = document.getElementById('kpiPeriod').value;
+
+  document.getElementById('setupScreen').style.display = 'none';
+  document.getElementById('tvScreen').classList.add('show');
+
+  // Subtitle
+  document.getElementById('tvSubtitle').textContent =
+    TV.selectedStaff.length < 5 ? TV.selectedStaff.join(', ') : `${TV.selectedStaff.length} сотрудников`;
+
+  const periods = { month: 'месяц', week: 'неделя', all: 'всё время' };
+  document.getElementById('periodLabel').textContent = '· ' + periods[TV.kpiPeriod];
+
+  // Countdown bar
+  const bar = document.getElementById('countdownBar');
+  bar.style.display = 'block';
+  bar.style.animationDuration = TV.refreshInterval + 's';
+
+  await refreshAll();
+
+  // Auto-refresh
+  TV.refreshTimer = setInterval(async () => {
+    await refreshAll();
+    // Restart countdown animation
+    bar.style.animation = 'none';
+    bar.offsetHeight; // reflow
+    bar.style.animation = `countdown ${TV.refreshInterval}s linear`;
+  }, TV.refreshInterval * 1000);
+}
+
+// ============================================================
+// REFRESH
+// ============================================================
+async function refreshAll() {
+  const dot = document.getElementById('pulseDot');
+  dot.style.background = 'var(--warn)';
+
+  try {
+    const [dashRes, allRes, activeRes] = await Promise.all([
+      get({ action: 'getDashboardData', sessionId: TV.session.sessionId }),
+      get({ action: 'getAllRepairs',    sessionId: TV.session.sessionId }),
+      get({ action: 'getActiveRepairs', sessionId: TV.session.sessionId })
+    ]);
+
+    if (dashRes.success)   TV.dashboard     = dashRes.data || {};
+    if (allRes.success)    TV.allRepairs    = allRes.repairs || [];
+    if (activeRes.success) TV.activeRepairs = activeRes.activeRepairs || [];
+
+    renderAll();
+    document.getElementById('lastUpdate').textContent = 'Обновлено: ' + new Date().toLocaleTimeString('ru-RU');
+  } catch(e) {
+    console.error('Refresh error:', e);
+  } finally {
+    dot.style.background = 'var(--success)';
+  }
+}
+
+// ============================================================
+// RENDER ALL
+// ============================================================
+function renderAll() {
+  renderKPITiles();
+  renderStaffTable();
+  renderTop3();
+  renderChart();
+  renderActiveRepairs();
+  renderAvgTime();
+}
+
+// ============================================================
+// KPI TILES
+// ============================================================
+function renderKPITiles() {
+  const d = TV.dashboard;
+  document.getElementById('kTotal').textContent  = d.totalRepairs     ?? '—';
+  document.getElementById('kActive').textContent = d.activeRepairs    ?? '—';
+
+  // Count done this month
+  const now = new Date();
+  const monthDone = TV.allRepairs.filter(r => {
+    if (!['Завершен','Готов к выдаче','Выдан'].includes(r.status)) return false;
+    const rd = r.completionDate || r.receiptDate;
+    if (!rd) return false;
+    const d = new Date(rd);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
+  document.getElementById('kDone').textContent = monthDone;
+
+  // Active techs (in selected staff who have active repairs)
+  const activeTechs = new Set(
+    TV.activeRepairs
+      .flatMap(r => [r.diagnosisTechnician, r.repairTechnician, r.testingTechnician])
+      .filter(t => t && TV.selectedStaff.includes(t))
+  );
+  document.getElementById('kTechs').textContent = activeTechs.size || '—';
+
+  // Leader of month
+  const techStats = computeTechStats();
+  const leader = Object.entries(techStats).sort((a,b) => b[1].done - a[1].done)[0];
+  document.getElementById('kLeader').textContent = leader
+    ? `${leader[0].split(' ')[0]}\n${leader[1].done} рем.`
+    : '—';
+}
+
+// ============================================================
+// COMPUTE TECH STATS
+// ============================================================
+function computeTechStats() {
+  const now = new Date();
+  const stats = {};
+
+  TV.selectedStaff.forEach(name => {
+    stats[name] = { total: 0, done: 0, inProgress: 0, thisWeek: 0, operations: { diag:0, repair:0, test:0 } };
+  });
+
+  TV.allRepairs.forEach(r => {
+    const techs = [r.diagnosisTechnician, r.repairTechnician, r.testingTechnician].filter(Boolean);
+    const isDone = ['Завершен','Готов к выдаче','Выдан','Тестирование завершено'].includes(r.status);
+
+    // Date filtering
+    const rd = r.completionDate || r.receiptDate;
+    const rDate = rd ? new Date(rd) : null;
+    const isThisMonth = rDate && rDate.getMonth() === now.getMonth() && rDate.getFullYear() === now.getFullYear();
+    const isThisWeek = rDate && (now - rDate) < 7 * 24 * 3600 * 1000;
+
+    techs.forEach(t => {
+      if (!stats[t]) return;
+      if (TV.kpiPeriod === 'month' && !isThisMonth) return;
+      if (TV.kpiPeriod === 'week'  && !isThisWeek)  return;
+
+      stats[t].total++;
+      if (isDone) stats[t].done++;
+      else stats[t].inProgress++;
+      if (isThisWeek) stats[t].thisWeek++;
+    });
+
+    // Operation types
+    if (r.diagnosisTechnician && stats[r.diagnosisTechnician]) stats[r.diagnosisTechnician].operations.diag++;
+    if (r.repairTechnician    && stats[r.repairTechnician])    stats[r.repairTechnician].operations.repair++;
+    if (r.testingTechnician   && stats[r.testingTechnician])   stats[r.testingTechnician].operations.test++;
+  });
+
+  return stats;
+}
+
+// ============================================================
+// STAFF TABLE
+// ============================================================
+function renderStaffTable() {
+  const stats = computeTechStats();
+  const sorted = Object.entries(stats).sort((a,b) => b[1].done - a[1].done);
+  const maxDone = Math.max(1, ...sorted.map(([,s]) => s.done));
+
+  const medals = ['🥇','🥈','🥉'];
+
+  document.getElementById('staffPanel').innerHTML = `
+    <table class="staff-table">
+      <thead><tr>
+        <th>#</th>
+        <th>Сотрудник</th>
+        <th style="text-align:center;">Завершено</th>
+        <th style="text-align:center;">В работе</th>
+        <th>Прогресс</th>
+        <th style="text-align:center;">Эфф.</th>
+      </tr></thead>
+      <tbody>
+        ${sorted.map(([name, s], i) => {
+          const eff = s.total > 0 ? Math.round(s.done / s.total * 100) : 0;
+          const barW = Math.round(s.done / maxDone * 100);
+          return `<tr>
+            <td class="staff-rank">${medals[i] || (i+1)}</td>
+            <td>
+              <div class="staff-name">${name}</div>
+              <div class="staff-role">🔍${s.operations.diag} 🔧${s.operations.repair} 💻${s.operations.test}</div>
+            </td>
+            <td class="staff-num" style="color:var(--success)">${s.done}</td>
+            <td class="staff-num" style="color:var(--warn)">${s.inProgress}</td>
+            <td>
+              <div class="staff-bar-wrap">
+                <div class="staff-bar">
+                  <div class="staff-bar-fill" style="width:${barW}%;${i===0?'background:var(--gold)':''}"></div>
+                </div>
+              </div>
+            </td>
+            <td class="staff-num" style="color:${eff>=80?'var(--success)':eff>=50?'var(--warn)':'var(--danger)'}">${eff}%</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ============================================================
+// TOP 3
+// ============================================================
+function renderTop3() {
+  const stats = computeTechStats();
+  const sorted = Object.entries(stats).sort((a,b) => b[1].done - a[1].done).slice(0, 3);
+
+  if (sorted.length < 1) {
+    document.getElementById('top3Panel').innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">Нет данных</div>';
+    return;
+  }
+
+  const tiers = ['gold','silver','bronze'];
+  const medals = ['🥇','🥈','🥉'];
+  // Reorder: silver, gold, bronze for visual podium
+  const order = sorted.length >= 3 ? [1, 0, 2] : sorted.length === 2 ? [1, 0] : [0];
+
+  document.getElementById('top3Panel').innerHTML = `
+    <div class="top3-grid" style="grid-template-columns:${order.length === 1 ? '1fr' : order.length === 2 ? '1fr 1.15fr' : '1fr 1.15fr 1fr'}">
+      ${order.map(idx => {
+        if (!sorted[idx]) return '';
+        const [name, s] = sorted[idx];
+        const firstName = name.split(' ')[0];
+        return `<div class="top3-item">
+          <div class="top3-podium ${tiers[idx]}">
+            <div class="top3-medal">${medals[idx]}</div>
+            <div class="top3-name">${firstName}</div>
+            <div class="top3-num">${s.done}</div>
+            <div class="top3-sub">ремонтов</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ============================================================
+// CHART — последние 7 дней
+// ============================================================
+function renderChart() {
+  const days = [];
+  const now = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    days.push({
+      label: d.toLocaleDateString('ru-RU', { weekday:'short', day:'numeric' }),
+      date: d.toISOString().substring(0, 10),
+      count: 0
+    });
+  }
+
+  // Count completions per day
+  TV.allRepairs.forEach(r => {
+    if (!['Завершен','Готов к выдаче','Тестирование завершено'].includes(r.status)) return;
+    const rd = r.completionDate || r.receiptDate;
+    if (!rd) return;
+    const d = new Date(rd).toISOString().substring(0, 10);
+    const day = days.find(dd => dd.date === d);
+    if (day) day.count++;
+  });
+
+  const maxCount = Math.max(1, ...days.map(d => d.count));
+
+  document.getElementById('chartPanel').innerHTML = `
+    <div class="chart-area">
+      <div class="chart-bars">
+        ${days.map((d, i) => {
+          const h = Math.max(4, Math.round(d.count / maxCount * 100));
+          const isToday = d.date === now.toISOString().substring(0, 10);
+          return `<div class="chart-bar-wrap">
+            <div class="chart-bar-val">${d.count || ''}</div>
+            <div class="chart-bar" style="height:${h}%;">
+              <div class="chart-bar-fill" style="height:100%;${isToday?'background:var(--gold)':''}"></div>
+            </div>
+            <div class="chart-bar-label" style="${isToday?'color:var(--gold);font-weight:700':''}">${d.label}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="chart-legend">
+        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--cyan)"></div>Завершено</div>
+        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--gold)"></div>Сегодня</div>
+      </div>
+    </div>`;
+}
+
+// ============================================================
+// ACTIVE REPAIRS FEED
+// ============================================================
+function renderActiveRepairs() {
+  const filtered = TV.activeRepairs.filter(r => {
+    const tech = r.diagnosisTechnician || r.repairTechnician || r.testingTechnician || '';
+    return TV.selectedStaff.some(s => tech.includes(s)) || TV.selectedStaff.length === 0;
+  });
+
+  document.getElementById('activeCount').textContent = `· ${filtered.length}`;
+
+  if (!filtered.length) {
+    document.getElementById('activePanel').innerHTML =
+      '<div style="color:var(--muted);text-align:center;padding:20px;">Нет активных ремонтов</div>';
+    return;
+  }
+
+  // Sort by priority
+  const prioOrder = { 'Высокий': 0, 'Средний': 1, 'Низкий': 2 };
+  const sorted = [...filtered].sort((a,b) => (prioOrder[a.priority]||1) - (prioOrder[b.priority]||1));
+
+  document.getElementById('activePanel').innerHTML =
+    `<div class="repair-feed">
+      ${sorted.slice(0, 8).map(r => `
+        <div class="repair-row">
+          <div class="repair-id">${r.repairId}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="repair-unit">${r.unit}</div>
+            <div class="repair-sn">${r.serialNumber || ''}</div>
+          </div>
+          <div>${statusBadge(r.status)}</div>
+          <div class="repair-tech">${r.diagnosisTechnician || r.repairTechnician || r.testingTechnician || '—'}</div>
+          ${r.priority === 'Высокий' ? '<div style="color:var(--danger);font-size:14px;">🔴</div>' : ''}
+        </div>`).join('')}
+    </div>`;
+}
+
+// ============================================================
+// AVG TIME BY UNIT
+// ============================================================
+function renderAvgTime() {
+  const unitTimes = {};
+
+  TV.allRepairs.forEach(r => {
+    if (!r.unit) return;
+    const start = r.receiptDate;
+    const end   = r.completionDate;
+    if (!start || !end) return;
+    const hours = (new Date(end) - new Date(start)) / 3600000;
+    if (hours <= 0 || hours > 720) return; // ignore outliers
+    if (!unitTimes[r.unit]) unitTimes[r.unit] = [];
+    unitTimes[r.unit].push(hours);
+  });
+
+  const avgs = Object.entries(unitTimes)
+    .map(([unit, times]) => ({
+      unit,
+      avg: times.reduce((a,b) => a+b, 0) / times.length,
+      count: times.length
+    }))
+    .filter(u => u.count >= 2)
+    .sort((a,b) => b.avg - a.avg)
+    .slice(0, 8);
+
+  if (!avgs.length) {
+    document.getElementById('avgPanel').innerHTML =
+      '<div style="color:var(--muted);text-align:center;padding:20px">Недостаточно данных</div>';
+    return;
+  }
+
+  const maxAvg = Math.max(...avgs.map(u => u.avg));
+
+  document.getElementById('avgPanel').innerHTML = avgs.map(u => {
+    const barW = Math.round(u.avg / maxAvg * 100);
+    const label = u.avg < 1 ? `${Math.round(u.avg*60)}м` : u.avg < 24 ? `${u.avg.toFixed(1)}ч` : `${(u.avg/24).toFixed(1)}д`;
+    return `<div class="avg-row">
+      <div class="avg-unit">${u.unit}<span style="font-size:10px;color:var(--muted);margin-left:6px;">(${u.count})</span></div>
+      <div class="avg-bar-wrap"><div class="avg-bar"><div class="avg-bar-fill" style="width:${barW}%"></div></div></div>
+      <div class="avg-val">${label}</div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// STATUS BADGE
+// ============================================================
+function statusBadge(status) {
+  const MAP = {
+    'Принят':                'badge-new',
+    'В диагностике':         'badge-diag',
+    'Диагностика завершена': 'badge-diagdone',
+    'В ремонте':             'badge-repair',
+    'Ремонт завершен':       'badge-repairdone',
+    'На тестировании':       'badge-testing',
+    'Тестирование завершено':'badge-testdone',
+    'Отложен':               'badge-paused',
+    'Завершен':              'badge-done',
+  };
+  return `<span class="badge ${MAP[status]||'badge-new'}">${status||'—'}</span>`;
+}
+
+// ============================================================
+// FULLSCREEN
+// ============================================================
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen?.() ||
+    document.documentElement.webkitRequestFullscreen?.();
+  } else {
+    document.exitFullscreen?.() || document.webkitExitFullscreen?.();
+  }
+}
+// Auto-enter fullscreen on TV launch
+document.addEventListener('click', () => {
+  if (document.getElementById('tvScreen').classList.contains('show') && !document.fullscreenElement) {
+    document.documentElement.requestFullscreen?.().catch(() => {});
+  }
+}, { once: true });
+
+// ============================================================
+// HTTP
+// ============================================================
+async function get(params) {
+  const url = SCRIPT_URL + '?' + new URLSearchParams(params).toString();
+  const r = await fetch(url);
+  return r.json();
+}
+</script>
+</body>
+</html>
