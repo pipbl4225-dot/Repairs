@@ -1,0 +1,39 @@
+{
+  "name": "АВП Технология — Ремонты",
+  "short_name": "АВП Ремонты",
+  "description": "Система учёта и управления ремонтами",
+  "start_url": "/Repairs/index.html",
+  "scope": "/Repairs/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0D0F14",
+  "theme_color": "#00BCD4",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%230D0F14'/><text y='120' x='96' text-anchor='middle' font-size='100' font-family='sans-serif'>🔧</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='80' fill='%230D0F14'/><text y='330' x='256' text-anchor='middle' font-size='280' font-family='sans-serif'>🔧</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Новый ремонт",
+      "url": "/Repairs/index.html#management",
+      "description": "Добавить новый ремонт"
+    },
+    {
+      "name": "Дашборд",
+      "url": "/Repairs/index.html#dashboard",
+      "description": "Статистика и графики"
+    }
+  ]
+}
