@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>АВП Технология — TV Дашборд</title>
+<link rel="manifest" href="tv-manifest.json">
+<meta name="theme-color" content="#00BCD4">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="АВП TV">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --cyan:    #00BCD4;
+  --dark:    #0D0F14;
+  --dark2:   #161920;
+  --dark3:   #1E2230;
+  --border:  #252A3A;
+  --text:    #E8EAF0;
+  --muted:   #5A6280;
+  --success: #4CAF50;
+  --warn:    #FF9800;
+  --danger:  #F44336;
+  --gold:    #FFD700;
+  --silver:  #C0C0C0;
+  --bronze:  #CD7F32;
+  --fs-xl:   clamp(1.2rem, 2.5vw, 2.2rem);
+  --fs-lg:   clamp(1rem, 2vw, 1.6rem);
+  --fs-md:   clamp(0.8rem, 1.5vw, 1.2rem);
+  --fs-sm:   clamp(0.65rem, 1.2vw, 1rem);
+  --fs-xs:   clamp(0.55rem, 1vw, 0.85rem);
+  --gap:     clamp(8px, 1.5vw, 20px);
+  --radius:  clamp(8px, 1vw, 16px);
+}
+body {
+  background: var(--dark);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* HEADER */
+.tv-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: clamp(6px,1vh,14px) clamp(12px,2vw,28px);
+  background: var(--dark2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.tv-logo { font-size: var(--fs-lg); font-weight: 900; letter-spacing: .05em; }
+.tv-logo span { color: var(--cyan); }
+.tv-time { font-size: var(--fs-md); color: var(--muted); font-family: monospace; }
+.tv-status { display:flex; align-items:center; gap:8px; font-size: var(--fs-sm); }
+.tv-dot { width: clamp(6px,1vw,12px); height: clamp(6px,1vw,12px); border-radius:50%; background:var(--success); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* MAIN GRID */
+.tv-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: auto 1fr 1fr;
+  gap: var(--gap);
+  padding: var(--gap);
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* KPI CARDS TOP */
+.tv-kpi-row {
+  grid-column: 1/-1;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--gap);
+}
+.kpi-card {
+  background: var(--dark2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: clamp(8px,1.5vh,20px) clamp(10px,1.5vw,20px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.kpi-card.accent { border-color: var(--cyan); background: rgba(0,188,212,.08); }
+.kpi-label { font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; letter-spacing:.06em; }
+.kpi-val { font-size: var(--fs-xl); font-weight: 900; color: var(--cyan); line-height:1; }
+.kpi-sub { font-size: var(--fs-xs); color: var(--muted); }
+
+/* TECH CARDS */
+.tv-techs {
+  grid-column: 1 / 3;
+  grid-row: 2 / 4;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  overflow: hidden;
+  min-height: 0;
+}
+.section-title {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--cyan);
+  flex-shrink: 0;
+}
+.techs-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(clamp(180px,20vw,280px), 1fr));
+  gap: var(--gap);
+  overflow-y: auto;
+  align-content: start;
+}
+.tech-card {
+  background: var(--dark2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: clamp(10px,1.5vh,18px);
+  position: relative;
+  overflow: hidden;
+}
+.tech-card::before {
+  content:'';
+  position:absolute;top:0;left:0;right:0;height:3px;
+  background: var(--cyan);
+}
+.tech-card.rank-1::before { background: var(--gold); }
+.tech-card.rank-2::before { background: var(--silver); }
+.tech-card.rank-3::before { background: var(--bronze); }
+.tech-rank { position:absolute; top: clamp(8px,1vh,14px); right: clamp(8px,1vw,14px); font-size: var(--fs-lg); opacity:.6; }
+.tech-name { font-size: var(--fs-md); font-weight:700; margin-bottom:8px; }
+.tech-stats { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+.tech-stat { text-align:center; }
+.tech-stat-val { font-size: var(--fs-lg); font-weight:700; }
+.tech-stat-lbl { font-size: var(--fs-xs); color: var(--muted); }
+.tech-complexity { display:flex; gap:4px; margin-top:8px; flex-wrap:wrap; }
+.cplx-badge {
+  font-size: var(--fs-xs);
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: var(--dark3);
+}
+.tech-bar { margin-top:8px; height:4px; background:var(--dark3); border-radius:2px; overflow:hidden; }
+.tech-bar-fill { height:100%; background:var(--cyan); border-radius:2px; transition:width 1s; }
+
+/* TREND CHART */
+.tv-trend {
+  grid-column: 3 / 4;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-height: 0;
+  overflow: hidden;
+}
+.trend-chart {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--dark2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: clamp(10px,1.5vh,18px);
+  min-height: 0;
+  overflow: hidden;
+}
+.chart-wrap {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: clamp(2px,.4vw,6px);
+  padding-top: 8px;
+  min-height: 0;
+}
+.chart-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  height: 100%;
+  justify-content: flex-end;
+}
+.chart-bar-wrap { width:100%; display:flex; gap:1px; align-items:flex-end; flex:1; }
+.chart-bar {
+  flex: 1;
+  border-radius: 2px 2px 0 0;
+  min-height: 2px;
+  transition: height .8s ease;
+}
+.bar-accepted { background: var(--cyan); opacity:.7; }
+.bar-issued   { background: var(--success); }
+.bar-returned { background: var(--danger); opacity:.8; }
+.chart-day { font-size: clamp(8px,.8vw,11px); color: var(--muted); white-space:nowrap; }
+.chart-legend { display:flex; gap:12px; margin-bottom:8px; flex-shrink:0; }
+.legend-item { display:flex; align-items:center; gap:4px; font-size: var(--fs-xs); }
+.legend-dot { width:10px; height:10px; border-radius:2px; }
+
+/* ACTIVE REPAIRS */
+.tv-active {
+  grid-column: 1/-1;
+  display: none; /* скрыт по умолчанию если нет места */
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width:4px; height:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+/* LOADER */
+#loader {
+  position:fixed; inset:0; background:var(--dark);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;
+  z-index:999;
+}
+.spinner {
+  width:48px; height:48px; border:4px solid var(--border);
+  border-top-color:var(--cyan); border-radius:50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to{transform:rotate(360deg)} }
+
+/* INSTALL BANNER */
+#installBanner {
+  display:none; position:fixed; bottom:20px; right:20px;
+  background:var(--dark2); border:1px solid var(--cyan);
+  border-radius:var(--radius); padding:12px 16px;
+  font-size: var(--fs-sm); z-index:100;
+  display:flex; align-items:center; gap:10px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 1200px) {
+  .tv-body { grid-template-columns: 1fr 1fr; }
+  .tv-trend { grid-column: 2/3; }
+  .tv-techs { grid-column: 1/2; }
+}
+@media (max-width: 768px) {
+  .tv-body { grid-template-columns: 1fr; grid-template-rows: auto; overflow-y:auto; }
+  .tv-kpi-row { grid-template-columns: repeat(3,1fr); }
+  .tv-techs, .tv-trend { grid-column: 1; }
+  body { overflow: auto; height:auto; min-height:100vh; }
+}
+@media (min-aspect-ratio: 16/9) and (min-width:1800px) {
+  :root { --fs-xl: 2.8rem; --fs-lg: 2rem; --fs-md: 1.4rem; --fs-sm: 1.1rem; --fs-xs: 0.9rem; }
+}
+</style>
+</head>
+<body>
+
+<div id="loader">
+  <div class="spinner"></div>
+  <div style="color:var(--muted);font-size:1rem;">Загрузка дашборда...</div>
+</div>
+
+<header class="tv-header">
+  <div class="tv-logo">АВП <span>ТЕХНОЛОГИЯ</span></div>
+  <div class="tv-status">
+    <div class="tv-dot" id="statusDot"></div>
+    <span id="statusText" style="color:var(--muted);">Обновление...</span>
+  </div>
+  <div class="tv-time" id="tvClock"></div>
+</header>
+
+<div class="tv-body">
+  <!-- KPI плитки -->
+  <div class="tv-kpi-row" id="kpiRow">
+    <div class="kpi-card accent">
+      <div class="kpi-label">Всего ремонтов</div>
+      <div class="kpi-val" id="kTotal">—</div>
+      <div class="kpi-sub">за всё время</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">За месяц</div>
+      <div class="kpi-val" id="kMonth">—</div>
+      <div class="kpi-sub" id="kMonthName">—</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Активных</div>
+      <div class="kpi-val" id="kActive" style="color:var(--warn);">—</div>
+      <div class="kpi-sub">в работе</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Выдано за месяц</div>
+      <div class="kpi-val" id="kIssued" style="color:var(--success);">—</div>
+      <div class="kpi-sub">завершено</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Сегодня принято</div>
+      <div class="kpi-val" id="kToday">—</div>
+      <div class="kpi-sub" id="kDate">—</div>
+    </div>
+  </div>
+
+  <!-- Техники -->
+  <div class="tv-techs">
+    <div class="section-title">👷 KPI сотрудников — <span id="techMonth">—</span></div>
+    <div class="techs-grid" id="techsGrid"></div>
+  </div>
+
+  <!-- Bottleneck -->
+  <div id="tvBottleneck" style="grid-column:3/4;display:flex;flex-direction:column;gap:var(--gap);min-height:0;overflow:hidden;">
+    <div class="section-title">🚧 Bottleneck — <span id="tvBottleneckMonth">—</span></div>
+    <div id="tvBottleneckContent" style="flex:1;background:var(--dark2);border:1px solid var(--border);border-radius:var(--radius);padding:clamp(8px,1.5vh,14px);overflow-y:auto;"></div>
+  </div>
+
+  <!-- Тренд -->
+  <div class="tv-trend" style="grid-column:1/2;grid-row:2;">
+    <div class="trend-chart">
+      <div class="section-title" style="margin-bottom:8px;">📈 Тренд участка — <span id="trendMonth">—</span></div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--cyan);opacity:.7;"></div> Принято</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--success);"></div> Выдано</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--danger);opacity:.8;"></div> Возврат</div>
+      </div>
+      <div class="chart-wrap" id="trendChart"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwzr3QrSzIRQuJqDLH8XVzEOLATAlkuFNRH5bFhYBM_HUF8NXYz-3b9vVotjoxUaQSc/exec';
+const REFRESH_MS = 60000; // 1 минута
+
+let _deferredInstall = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _deferredInstall = e;
+  document.getElementById('installBanner').style.display = 'flex';
+});
+
+// Часы
+function updateClock() {
+  const now = new Date();
+  document.getElementById('tvClock').textContent =
+    now.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit',second:'2-digit'}) +
+    ' · ' + now.toLocaleDateString('ru-RU', {day:'numeric',month:'long',weekday:'short'});
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// Месяц
+function monthName(m) {
+  return ['Январь','Февраль','Март','Апрель','Май','Июнь',
+    'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'][m];
+}
+
+// Загрузка данных
+async function loadData() {
+  try {
+    const [r1, r2] = await Promise.all([
+      fetch(SCRIPT_URL + '?action=tvDashboard&_=' + Date.now()),
+      fetch(SCRIPT_URL + '?action=getBottleneck&sessionId=tv&_=' + Date.now())
+    ]);
+    const d  = await r1.json();
+    const db = await r2.json();
+    if (!d.success) throw new Error(d.error);
+    if (db.success) d.bottleneck_data = db;
+    render(d);
+    document.getElementById('statusDot').style.background = 'var(--success)';
+    document.getElementById('statusText').textContent = 'Обновлено ' +
+      new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('loader').style.display = 'none';
+  } catch(e) {
+    document.getElementById('statusDot').style.background = 'var(--danger)';
+    document.getElementById('statusText').textContent = 'Ошибка: ' + e.message;
+    document.getElementById('loader').style.display = 'none';
+  }
+}
+
+function render(d) {
+  const now   = new Date();
+  const month = now.getMonth();
+
+  // KPI плитки
+  document.getElementById('kTotal').textContent  = d.totals.total  || 0;
+  document.getElementById('kMonth').textContent  = d.totals.month  || 0;
+  document.getElementById('kActive').textContent = d.totals.active || 0;
+  document.getElementById('kIssued').textContent = d.totals.issued || 0;
+  document.getElementById('kToday').textContent  = d.totals.today  || 0;
+  document.getElementById('kMonthName').textContent = monthName(month);
+  document.getElementById('kDate').textContent =
+    now.toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
+  document.getElementById('techMonth').textContent  = monthName(month);
+  document.getElementById('trendMonth').textContent = monthName(month);
+
+  // Техники
+  renderTechs(d.techStats || []);
+
+  // Тренд
+  renderTrend(d.trend || []);
+
+  // Bottleneck
+  if (d.bottleneck_data) renderBottleneck(d.bottleneck_data);
+}
+
+function renderBottleneck(d) {
+  const el = document.getElementById('tvBottleneckContent');
+  const mo = document.getElementById('tvBottleneckMonth');
+  if (!el) return;
+
+  const months = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+  if (mo) mo.textContent = months[(d.month||1)-1];
+
+  const stages = d.stages || [];
+  const maxMed = Math.max(1, ...stages.map(s => s.median));
+
+  // Узкое место
+  let html = `<div style="background:rgba(244,67,54,.15);border:1px solid rgba(244,67,54,.4);border-radius:8px;padding:8px 12px;margin-bottom:8px;">
+    <div style="font-size:var(--fs-xs);color:#ef9a9a;">Узкое место</div>
+    <div style="font-size:var(--fs-md);font-weight:700;color:#f44336;">${d.bottleneck || '—'}</div>
+    <div style="font-size:var(--fs-xs);color:#ef9a9a;">Полный цикл: ${d.cycleMedian || 0}ч медиана</div>
+  </div>`;
+
+  // Этапы
+  stages.forEach(s => {
+    const isPause  = s.key?.startsWith('pause');
+    const isBottle = s.key === d.bottleneckKey;
+    const w        = s.median > 0 ? Math.max(4, Math.round(s.median / maxMed * 100)) : 0;
+    const color    = isBottle ? '#f44336' : isPause ? 'var(--warn)' : 'var(--cyan)';
+    const trend    = s.trend || 0;
+    const trendStr = trend > 10 ? `▲${trend}%` : trend < -10 ? `▼${Math.abs(trend)}%` : '';
+
+    html += `<div style="margin-bottom:6px;">
+      <div style="display:flex;justify-content:space-between;font-size:var(--fs-xs);margin-bottom:2px;">
+        <span style="color:${isBottle?'#f44336':'var(--text)'};">${s.icon} ${s.label}${isBottle?' 🚧':''}</span>
+        <span style="font-family:monospace;color:${color};">
+          ${s.count > 0 ? s.median+'ч' : '—'}
+          ${trendStr ? `<span style="color:${trend>0?'#f44336':'#4caf50'};font-size:0.8em;"> ${trendStr}</span>` : ''}
+        </span>
+      </div>
+      <div style="height:4px;background:rgba(255,255,255,.1);border-radius:2px;">
+        <div style="height:100%;width:${w}%;background:${color};border-radius:2px;transition:width .8s;"></div>
+      </div>
+    </div>`;
+  });
+
+  // Давно в работе
+  if (d.currentStuck?.length) {
+    html += `<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px;">
+      <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:6px;">🐢 Долго в работе</div>
+      ${d.currentStuck.slice(0,3).map(r => `
+        <div style="display:flex;justify-content:space-between;font-size:var(--fs-xs);padding:3px 0;border-bottom:1px solid var(--border);">
+          <span style="color:var(--cyan);">${r.repairId} ${r.unit}</span>
+          <span style="color:${r.totalHours>48?'#f44336':'var(--warn)'};">${r.totalHours}ч</span>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+function renderTechs(stats) {
+  const el = document.getElementById('techsGrid');
+  if (!stats.length) {
+    el.innerHTML = '<div style="color:var(--muted);grid-column:1/-1;padding:20px;text-align:center;">Нет данных за месяц</div>';
+    return;
+  }
+  const maxRep = Math.max(...stats.map(s=>s.repairs), 1);
+  el.innerHTML = stats.map((s, i) => {
+    const rankClass = i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'';
+    const rankIcon  = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+    const pct = Math.round(s.repairs / maxRep * 100);
+    const complexStr = [
+      s.simple  ? `<span class="cplx-badge">⚡${s.simple}</span>`   : '',
+      s.medium  ? `<span class="cplx-badge">🔧${s.medium}</span>`   : '',
+      s.hard    ? `<span class="cplx-badge" style="color:var(--warn);">🔩${s.hard}</span>` : '',
+      s.unique  ? `<span class="cplx-badge" style="color:var(--gold);">🏆${s.unique}</span>` : ''
+    ].filter(Boolean).join('');
+    return `<div class="tech-card ${rankClass}">
+      <div class="tech-rank">${rankIcon}</div>
+      <div class="tech-name">${s.name}</div>
+      <div class="tech-stats">
+        <div class="tech-stat">
+          <div class="tech-stat-val" style="color:var(--cyan);">${s.repairs}</div>
+          <div class="tech-stat-lbl">ремонтов</div>
+        </div>
+        <div class="tech-stat">
+          <div class="tech-stat-val" style="color:var(--muted);">${s.hours}ч</div>
+          <div class="tech-stat-lbl">рабочих</div>
+        </div>
+      </div>
+      ${complexStr ? `<div class="tech-complexity">${complexStr}</div>` : ''}
+      ${s.topUnit ? `<div style="font-size:var(--fs-xs);color:var(--muted);margin-top:6px;">🔧 ${s.topUnit}</div>` : ''}
+      <div class="tech-bar"><div class="tech-bar-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderTrend(trend) {
+  const el = document.getElementById('trendChart');
+  if (!trend.length) { el.innerHTML = ''; return; }
+
+  const maxVal = Math.max(...trend.map(t => Math.max(t.accepted, t.issued, t.returned||0)), 1);
+  const today  = new Date().getDate();
+
+  el.innerHTML = trend.map(t => {
+    const hA = Math.round((t.accepted        / maxVal) * 100);
+    const hI = Math.round((t.issued          / maxVal) * 100);
+    const hR = Math.round(((t.returned||0)   / maxVal) * 100);
+    const isToday = t.day === today;
+    return `<div class="chart-col" title="${t.date}: принято ${t.accepted}, выдано ${t.issued}">
+      <div class="chart-bar-wrap" style="height:100%;">
+        <div class="chart-bar bar-accepted" style="height:${hA}%;${isToday?'opacity:1;':''}"></div>
+        <div class="chart-bar bar-issued"   style="height:${hI}%;${isToday?'opacity:1;':''}"></div>
+        ${hR > 0 ? `<div class="chart-bar bar-returned" style="height:${hR}%;${isToday?'opacity:1;':''}"></div>` : ''}
+      </div>
+      <div class="chart-day" style="${isToday?'color:var(--cyan);font-weight:700;':''}">${t.day}</div>
+    </div>`;
+  }).join('');
+}
+
+// Запуск
+loadData();
+setInterval(loadData, REFRESH_MS);
+
+// PWA install
+function installApp() {
+  if (_deferredInstall) {
+    _deferredInstall.prompt();
+    _deferredInstall.userChoice.then(() => {
+      document.getElementById('installBanner').style.display = 'none';
+    });
+  }
+}
+
+// Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('tv-sw.js').catch(()=>{});
+}
+</script>
+
+<div id="installBanner" style="display:none;">
+  📱 Установить как приложение
+  <button onclick="installApp()" style="background:var(--cyan);border:none;color:#000;padding:6px 14px;border-radius:8px;cursor:pointer;font-weight:700;">Установить</button>
+  <button onclick="this.parentElement.style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;">✕</button>
+</div>
+
+</body>
+</html>
